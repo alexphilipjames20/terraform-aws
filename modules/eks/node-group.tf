@@ -3,7 +3,7 @@ resource "aws_eks_node_group" "node_group" {
   cluster_name    = aws_eks_cluster.eks_cluster.name
   node_group_name = var.node_group_name
   version         = aws_eks_cluster.eks_cluster.version
-  node_role_arn   = aws_iam_role.node-group-iam-role.arn
+  node_role_arn = var.create_node_iam_role ? aws_iam_role.node-group-iam-role[0].arn : data.aws_iam_role.existing_node_group_role[0].arn
   subnet_ids      = var.vpc_subnets
   capacity_type   = "ON_DEMAND"
   disk_size       = var.node_disk_size

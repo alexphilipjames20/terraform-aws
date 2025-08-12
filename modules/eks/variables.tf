@@ -28,11 +28,6 @@ variable "node_disk_size" {
   type        = number
 }
 
-variable "policy_arns" {
-  description = "List of IAM policy ARNs to attach to the roles"
-  type        = list(string)
-}
-
 variable "principal_arn" {
   description = "The ARN of the principal"
   type        = string
@@ -53,4 +48,36 @@ variable "access_policy_arn" {
 variable "vpc_id" {
   description = "The ID of the VPC where the EKS cluster will be deployed"
   type        = string
+}
+
+#new
+
+variable "create_iam_role" {
+  description = "Whether to create a new IAM role for the EKS cluster"
+  type        = bool
+  default     = false
+}
+
+variable "create_node_iam_role" {
+  description = "Whether to create a new IAM role for the EKS node group"
+  type        = bool
+  default     = false
+}
+
+variable "policy_arns" {
+  description = "List of IAM policy ARNs for cluster and node group"
+  type        = list(string)
+}
+
+#
+variable "cluster_iam_role_name" {
+  description = "Name of the existing IAM role for the EKS cluster (if not creating a new one)"
+  type        = string
+  default     = "eks-cluster-role"
+}
+
+variable "node_group_iam_role_name" {
+  description = "Name of the existing IAM role for the EKS node group (if not creating a new one)"
+  type        = string
+  default     = "eks-node-group-role"
 }

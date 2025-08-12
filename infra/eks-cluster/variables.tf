@@ -307,3 +307,17 @@ variable "rule_name_prefix" {
   description = "Prefix used for all event bridge rules"
   type        = string
 }
+
+
+#
+variable "cluster_iam_role_name" {
+  description = "Name of the existing IAM role for the EKS cluster (if not creating a new one)"
+  type        = string
+  default     = "eks-cluster-role"
+}
+
+variable "node_group_iam_role_name" {
+  description = "Name of the existing IAM role for the EKS node group (if not creating a new one)"
+  type        = string
+  default     = "eks-node-group-role"
+}

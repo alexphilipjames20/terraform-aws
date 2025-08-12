@@ -21,6 +21,6 @@ resource "aws_security_group" "eks_cluster" {
   }
 
   tags = {
-    "karpenter.sh/discovery" = "${var.cluster_name}"
+    "name" = "${var.cluster_name}"
   }
 }
