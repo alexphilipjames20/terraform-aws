@@ -2,7 +2,7 @@ region = "ap-south-1"
 
 cluster_name       = "terraform-eks-cluster-poc"
 role_name          = "eks-cluster-role"
-vpc_subnets        = ["subnet-0de6dcb0784031eaa", "subnet-0d2df5601dd8e3404"]
+vpc_subnets        = ["subnet-0ae9338b35db4d85f", "subnet-02285850d664908c3"]
 node_group_name    = "terraform-eks-node-group"
 node_instance_type = ["t3.medium"]
 node_disk_size     = 20
@@ -23,7 +23,7 @@ kubernetes_groups = ["group-1"]
 access_policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 
 # Security group variables
-vpc_id = "vpc-0137dcbe39b5027c8"
+vpc_id = "vpc-0cdf93419ae2add06"
 
 # Custom variables
 access_entry_type             = "EC2_LINUX"

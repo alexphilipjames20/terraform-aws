@@ -1,0 +1,93 @@
+test_pod:
+  enabled: true
+  image: bats/bats:1.8.2
+  pullPolicy: IfNotPresent
+
+loki:
+  enabled: true
+  isDefault: true
+  url: http://{{ (include "loki.serviceName" .) }}:{{ .Values.loki.service.port }}
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 400m
+      memory: 512Mi
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: http-metrics
+    initialDelaySeconds: 45
+  livenessProbe:
+    httpGet:
+      path: /ready
+      port: http-metrics
+    initialDelaySeconds: 45
+  datasource:
+    jsonData: "{}"
+    uid: ""
+
+grafana:
+  enabled: true
+  sidecar:
+    datasources:
+      enabled: true
+      maxLines: 1000
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        # Logs
+        - name: Loki
+          type: loki
+          access: proxy
+          url: http://loki.grafana-loki.svc.cluster.local:3100
+          isDefault: false
+        # Metrics (Mimir is default)
+        - name: Mimir
+          type: prometheus
+          access: proxy
+          url: http://mimir-query-frontend.mimir.svc.cluster.local:8080/prometheus
+          isDefault: true
+        # Traces
+        - name: Tempo
+          type: tempo
+          access: proxy
+          url: http://tempo-query-frontend.tempo.svc.cluster.local:3200
+          isDefault: false
+        # Optional – direct Prometheus
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://prometheus.otel-demo.svc.cluster.local:9090
+          isDefault: false
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  image:
+    repository: grafana/grafana
+    tag: 10.2.3-ubuntu   # stable/LTS release
+  service:
+    type: NodePort
+
+prometheus:
+  enabled: false   # don’t install a new Prometheus, just integrate with existing one
+promtail:
+  enabled: false
+fluent-bit:
+  enabled: false
+filebeat:
+  enabled: false
+logstash:
+  enabled: false
+proxy:
+  http_proxy: ""
+  https_proxy: ""
+  no_proxy: ""
+
