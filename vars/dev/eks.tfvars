@@ -4,8 +4,8 @@ cluster_name       = "terraform-eks-cluster-poc"
 role_name          = "eks-cluster-role"
 vpc_subnets        = ["subnet-0ae9338b35db4d85f", "subnet-02285850d664908c3"]
 node_group_name    = "terraform-eks-node-group"
-node_instance_type = ["t3.medium"]
-node_disk_size     = 20
+node_instance_type = ["m5.large"]
+node_disk_size     = 200
 
 policy_arns = [
   "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",

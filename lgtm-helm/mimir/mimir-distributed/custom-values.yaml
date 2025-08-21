@@ -1,0 +1,153 @@
+global:
+  extraEnvFrom:
+    - secretRef:
+        name: mimir-s3-credentials   # contains AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY
+
+mimir:
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 400m
+      memory: 512Mi
+
+  nodeSelector:
+    lgtm: mimir
+
+  structuredConfig:
+    memberlist:
+      cluster_label: "mimir"
+      cluster_label_verification_disabled: false
+
+    server:
+      log_level: info
+      path_prefix: /prometheus
+      prometheus_http_prefix_enabled: true
+
+      grpc_server_max_recv_msg_size: 104857600
+      grpc_server_max_send_msg_size: 104857600
+      grpc_server_max_concurrent_streams: 1000
+
+    limits:
+      max_label_names_per_series: 120
+      max_global_series_per_user: 5_000_000
+      ingestion_burst_size: 50_000
+      ingestion_rate: 20_000
+      max_global_series_per_metric: 50_000_000
+      compactor_blocks_retention_period: 24h
+
+    blocks_storage:
+      backend: s3
+      s3:
+        endpoint: "s3.ap-south-1.amazonaws.com"
+        region: "ap-south-1"
+        bucket_name: "eks-sherlock-mimir-blocks"
+        insecure: false
+        access_key_id: ""
+        secret_access_key: ""
+          # creds pulled from secret via global.extraEnvFrom
+
+    compactor:
+      compaction_interval: 24h
+
+# --- Core services (lightweight replicas for demo) ---
+ingester:
+  replicas: 1
+  persistentVolume:
+    enabled: false
+  nodeSelector:
+    lgtm: mimir
+  persistentVolume:
+    enabled: false
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 400m
+      memory: 512Mi
+
+distributor:
+  replicas: 1
+  extraArgs:
+    auth.multitenancy-enabled: false
+    log.level: info
+  nodeSelector:
+    lgtm: mimir
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+compactor:
+  replicas: 1
+  nodeSelector:
+    lgtm: mimir
+  persistentVolume:
+    enabled: false
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 400m
+      memory: 512Mi
+
+querier:
+  replicas: 1
+  nodeSelector:
+    lgtm: mimir
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+query_frontend:
+  replicas: 1
+  nodeSelector:
+    lgtm: mimir
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+store_gateway:
+  replicas: 1
+  nodeSelector:
+    lgtm: mimir
+  zoneAwareReplication:
+    enabled: false
+  persistentVolume:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+# --- Disable unused components for demo ---
+rollout_operator:
+  enabled: false
+gateway:
+  enabledNonEnterprise: false
+ruler:
+  enabled: false
+query_scheduler:
+  enabled: false
+overrides_exporter:
+  enabled: false
+alertmanager:
+  enabled: false
+minio:
+  enabled: false
+

@@ -10,10 +10,10 @@ loki:
   resources:
     requests:
       cpu: 200m
-      memory: 256Mi
-    limits:
-      cpu: 400m
       memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
   readinessProbe:
     httpGet:
       path: /ready
@@ -27,13 +27,14 @@ loki:
   datasource:
     jsonData: "{}"
     uid: ""
+  nodeSelector:
+    lgtm: grafana-loki
 
 grafana:
   enabled: true
   sidecar:
     datasources:
-      enabled: true
-      maxLines: 1000
+      enabled: false
   datasources:
     datasources.yaml:
       apiVersion: 1
@@ -44,48 +45,72 @@ grafana:
           access: proxy
           url: http://loki.grafana-loki.svc.cluster.local:3100
           isDefault: false
+
         # Metrics (Mimir is default)
         - name: Mimir
           type: prometheus
           access: proxy
           url: http://mimir-query-frontend.mimir.svc.cluster.local:8080/prometheus
           isDefault: true
+
         # Traces
         - name: Tempo
           type: tempo
           access: proxy
-          url: http://tempo-query-frontend.tempo.svc.cluster.local:3200
+          url: http://tempo.tempo.svc.cluster.local:3200
           isDefault: false
-        # Optional – direct Prometheus
+
+        # Optional – direct Prometheus (otel-demo namespace)
         - name: Prometheus
           type: prometheus
           access: proxy
           url: http://prometheus.otel-demo.svc.cluster.local:9090
           isDefault: false
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30080
 
   resources:
     requests:
-      cpu: 200m
-      memory: 256Mi
-    limits:
-      cpu: 500m
+      cpu: 250m
       memory: 512Mi
+    limits:
+      cpu: 600m
+      memory: 1Gi
   image:
     repository: grafana/grafana
     tag: 10.2.3-ubuntu   # stable/LTS release
-  service:
-    type: NodePort
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 30
+    timeoutSeconds: 5
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 30
+    timeoutSeconds: 5
+  nodeSelector:
+    lgtm: grafana-loki
 
 prometheus:
   enabled: false   # don’t install a new Prometheus, just integrate with existing one
+
 promtail:
   enabled: false
+
 fluent-bit:
   enabled: false
+
 filebeat:
   enabled: false
+
 logstash:
   enabled: false
+
 proxy:
   http_proxy: ""
   https_proxy: ""

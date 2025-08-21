@@ -1,0 +1,199 @@
+global:
+  commonLabels: {}
+nameOverride: ""
+fullnameOverride: ""
+replicas: 1
+labels: {}
+annotations: {}
+tempo:
+
+  repository: grafana/tempo
+  tag: ""
+  pullPolicy: IfNotPresent
+  updateStrategy: RollingUpdate
+  resources: {}
+  memBallastSizeMbs: 1024
+  multitenancyEnabled: false
+  reportingEnabled: true
+  metricsGenerator:
+    enabled: false
+    remoteWriteUrl: "http://prometheus.monitoring:9090/api/v1/write"
+  ingester: {}
+  querier: {}
+  queryFrontend: {}
+  retention: 24h
+  overrides:
+    defaults: {}
+    per_tenant_override_config: /conf/overrides.yaml
+  per_tenant_overrides: {}
+  server:
+    # -- HTTP server listen port
+    http_listen_port: 3200
+  livenessProbe:
+    httpGet:
+      path: /ready
+      port: 3200
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 3200
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+      wal:
+        path: /var/tempo/wal
+  receivers:
+    jaeger:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:14250
+        thrift_binary:
+          endpoint: 0.0.0.0:6832
+        thrift_compact:
+          endpoint: 0.0.0.0:6831
+        thrift_http:
+          endpoint: 0.0.0.0:14268
+    opencensus:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"
+      resources:
+  requests: { cpu: 100m, memory: 200Mi }
+  limits: { cpu: 200m, memory: 400Mi }
+
+  securityContext: {}
+  extraArgs: {}
+  extraEnv: []
+  extraEnvFrom: []
+  extraVolumeMounts: []
+config: |
+    memberlist:
+      cluster_label: "{{ .Release.Name }}.{{ .Release.Namespace }}"
+    multitenancy_enabled: {{ .Values.tempo.multitenancyEnabled }}
+    usage_report:
+      reporting_enabled: {{ .Values.tempo.reportingEnabled }}
+    compactor:
+      compaction:
+        block_retention: {{ .Values.tempo.retention }}
+    distributor:
+      receivers:
+        {{- toYaml .Values.tempo.receivers | nindent 8 }}
+    ingester:
+      {{- toYaml .Values.tempo.ingester | nindent 6 }}
+    server:
+      {{- toYaml .Values.tempo.server | nindent 6 }}
+    storage:
+      {{- toYaml .Values.tempo.storage | nindent 6 }}
+    querier:
+      {{- toYaml .Values.tempo.querier | nindent 6 }}
+    query_frontend:
+      {{- toYaml .Values.tempo.queryFrontend | nindent 6 }}
+    overrides:
+      {{- toYaml .Values.tempo.overrides | nindent 6 }}
+      {{- if .Values.tempo.metricsGenerator.enabled }}
+    metrics_generator:
+          storage:
+            path: "/tmp/tempo"
+            remote_write:
+              - url: {{ .Values.tempo.metricsGenerator.remoteWriteUrl }}
+          traces_storage:
+            path: "/tmp/traces"
+      {{- end }}
+
+tempoQuery:
+  repository: grafana/tempo-query
+  tag: null
+  pullPolicy: IfNotPresent
+  enabled: false
+
+  service:
+    port: 16686
+
+  ingress:
+    enabled: false
+    annotations: {}
+    labels: {}
+    path: /
+    pathType: Prefix
+
+    hosts:
+      - query.tempo.example.com
+    extraPaths: []
+    tls: []
+
+  resources: {}
+  extraArgs: {}
+  extraEnv: []
+  extraVolumeMounts: []
+  securityContext: {}
+securityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  runAsNonRoot: true
+
+serviceAccount:
+  create: true
+  name: null
+  imagePullSecrets: []
+  annotations: {}
+  labels: {}
+  automountServiceAccountToken: true
+
+service:
+  type: ClusterIP
+  clusterIP: ""
+  loadBalancerIP:
+  protocol: "TCP"
+  annotations: {}
+  labels: {}
+  targetPort: ""
+
+serviceMonitor:
+  enabled: false
+  interval: ""
+  additionalLabels: {}
+  annotations: {}
+
+persistence:
+  enabled: false
+  enableStatefulSetAutoDeletePVC: false
+  # storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+
+# -- Pod Annotations
+podAnnotations: {}
+
+# -- Pod (extra) Labels
+podLabels: {}
+
+extraLabels: {}
+extraVolumes: []
+
+nodeSelector: {}
+
+tolerations: []
+affinity: {}
+
+priorityClassName: null
+hostAliases: []
+networkPolicy:
+  enabled: false
+

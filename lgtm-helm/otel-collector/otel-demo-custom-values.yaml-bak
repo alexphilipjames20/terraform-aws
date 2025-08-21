@@ -1,0 +1,210 @@
+default:
+  env:
+    - name: OTEL_SERVICE_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: "metadata.labels['app.kubernetes.io/component']"
+    - name: OTEL_COLLECTOR_NAME
+      value: otel-collector
+    - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      value: cumulative
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: 'service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version={{ .Chart.AppVersion }}'
+  image:
+    repository: ghcr.io/open-telemetry/demo
+    pullPolicy: IfNotPresent
+  replicas: 1
+  revisionHistoryLimit: 10
+  schedulingRules:
+    nodeSelector:
+      lgtm: otel-demo
+    affinity: {}
+    tolerations: []
+  securityContext: {}
+
+serviceAccount:
+  create: true
+
+components:
+#quote
+  quote:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: QUOTE_PORT
+        value: "8080"
+      - name: OTEL_PHP_AUTOLOAD_ENABLED
+        value: "true"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4318
+    resources:
+      limits:
+        memory: 40Mi
+    securityContext:
+      runAsUser: 33  # www-data
+      runAsGroup: 33
+      runAsNonRoot: true
+#email
+  email:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: EMAIL_PORT
+        value: "8080"
+      - name: APP_ENV
+        value: production
+      - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4318/v1/traces
+    resources:
+      limits:
+        memory: 100Mi
+#currency
+  currency:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: CURRENCY_PORT
+        value: "8080"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+      - name: VERSION
+        value: "{{ .Chart.AppVersion }}"
+    resources:
+      limits:
+        memory: 20Mi
+#image-provider
+  image-provider:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8081
+    env:
+      - name: IMAGE_PROVIDER_PORT
+        value: "8081"
+      - name: OTEL_COLLECTOR_PORT_GRPC
+        value: "4317"
+      - name: OTEL_COLLECTOR_HOST
+        value: $(OTEL_COLLECTOR_NAME)
+    resources:
+      limits:
+        memory: 50Mi
+#shipping
+  shipping:
+    enabled: true
+    useDefault:
+      env: true
+    service:
+      port: 8080
+    env:
+      - name: SHIPPING_PORT
+        value: "8080"
+      - name: QUOTE_ADDR
+        value: http://quote:8080
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+    resources:
+      limits:
+        memory: 20Mi
+
+# Disable all other components (set enabled: false)
+  kafka:
+    enabled: false
+  checkout:
+    enabled: false
+  accounting:
+    enabled: false
+  ad:
+    enabled: false
+  cart:
+    enabled: false
+  payment:
+    enabled: false
+  flagd:
+    enabled: false
+  fraud-detection:
+    enabled: false
+  frontend:
+    enabled: false
+  frontend-proxy:
+    enabled: false
+  image-provider:
+    enabled: false
+  load-generator:
+    enabled: false
+  recommendation:
+    enabled: false
+  valkey-cart:
+    enabled: false
+  product-catalog:
+    enabled: false
+grafana:
+  enabled: false
+opensearch:
+  enabled: false
+jaeger:
+  enabled: false
+
+opentelemetry-collector:
+  enabled: true
+  fullnameOverride: otel-collector
+  nodeSelector:
+    lgtm: otel-demo
+  resources:
+    requests: { cpu: 100m, memory: 300Mi }
+    limits: { cpu: 300m, memory: 600Mi }
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc: {}
+          http: {}
+    exporters:
+      otlp/tempo:
+        endpoint: http://tempo.tempo.svc:4317
+        tls:
+          insecure: true
+      prometheus:
+        endpoint: "0.0.0.0:8889"  # This is what Prometheus scrapes (NOT otlphttp!)
+
+    processors:
+      memory_limiter: {}
+      batch: {}
+
+    connectors:
+      spanmetrics: {}  # Declare spanmetrics as a connector
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [otlp/tempo, spanmetrics]  # Export spans to Tempo and to spanmetrics
+
+        metrics:
+          receivers: [spanmetrics]  # Receive metrics from the spanmetrics connector
+          processors: [batch]
+          exporters: [prometheus]  # Export span metrics to Prometheus
+prometheus:
+  enabled: true
+  server:
+    fullnameOverride: prometheus
+    nodeSelector:
+      lgtm: otel-demo
+    service:
+      type: NodePort
+      servicePort: 9090
+      nodePort: 30090
+    resources:
+      requests: { cpu: 200m, memory: 300Mi }
+      limits: { cpu: 400m, memory: 600Mi }
